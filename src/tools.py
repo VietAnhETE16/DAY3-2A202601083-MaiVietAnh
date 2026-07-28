@@ -42,16 +42,32 @@ def _contains_keyword(text: str, keyword: str) -> bool:
     return bool(re.search(pattern, text))
 
 
+SPECIALTY_SYNONYMS = {
+    "nhãn khoa": "mắt",
+    "khoa mắt": "mắt",
+    "mắt": "mắt",
+    "chấn thương chỉnh hình": "cơ xương khớp",
+    "chỉnh hình": "cơ xương khớp",
+}
+
+
 def _match_specialty(specialty: str) -> str | None:
     specialty_key = _normalize_text(specialty)
+    if specialty_key in SPECIALTY_SYNONYMS:
+        return SPECIALTY_SYNONYMS[specialty_key]
     for canonical in SPECIALTY_DATABASE:
         if _normalize_text(canonical) == specialty_key:
+            return canonical
+        if _normalize_text(canonical) in specialty_key or specialty_key in _normalize_text(canonical):
             return canonical
     return None
 
 
 def _valid_booking_code(value: str) -> bool:
-    return bool(re.fullmatch(r"BK-[A-F0-9]{10}", value.strip().upper()))
+    val = value.strip().upper().replace("#", "")
+    if re.fullmatch(r"BK-[A-F0-9]{10}", val) or re.fullmatch(r"BK[0-9]{4,10}", val):
+        return True
+    return False
 
 
 SPECIALTY_DATABASE = {
@@ -81,9 +97,14 @@ SPECIALTY_DATABASE = {
         "clinics": ["Khoa Nhi Gia Đình", "Phòng khám Nhi Đồng Xanh"],
     },
     "cơ xương khớp": {
-        "keywords": ["co xuong khop", "khop", "lung", "cot song", "te tay", "dau goi"],
-        "description": "Khám đau khớp, thoái hóa, đau cơ, chấn thương nhẹ.",
-        "clinics": ["Phòng khám Cơ Xương Khớp An Bình", "Trung tâm Chấn thương Chỉnh hình"],
+        "keywords": ["co xuong khop", "khop", "lung", "cot song", "te tay", "dau goi", "chan thuong chinh hinh", "chinh hinh"],
+        "description": "Khám đau khớp, thoái hóa, đau cơ, chấn thương chỉnh hình.",
+        "clinics": ["Phòng khám Cơ Xương Khớp An Bình", "Trung tâm Chấn thương Chỉnh hình Việt Đức"],
+    },
+    "mắt": {
+        "keywords": ["mat", "dau mat do", "ngua mat", "chay nuoc mat", "gen mat", "nhan khoa", "khoa mat"],
+        "description": "Chuyên khám và điều trị các bệnh lý về mắt, nhãn khoa, đau mắt đỏ, suy giảm thị lực.",
+        "clinics": ["Bệnh viện Mắt Trung ương", "Phòng khám Chuyên khoa Mắt VinHealth", "Bệnh viện Mắt Hà Nội"],
     },
     "tiêu hóa": {
         "keywords": ["tieu hoa", "da day", "tieu chay", "buon non", "dau bung", "chua day"],
@@ -99,36 +120,43 @@ SPECIALTY_DATABASE = {
 
 DOCTOR_DATABASE = {
     "nội khoa": [
-        {"name": "BS. Nguyễn Minh An", "level": "Thạc sĩ", "years": 12, "rating": 4.8},
-        {"name": "BS. Trần Thu Hà", "level": "Chuyên khoa I", "years": 9, "rating": 4.7},
+        {"name": "BS. Nguyễn Minh An", "level": "Thạc sĩ", "years": 12, "rating": 4.8, "city": "Hà Nội"},
+        {"name": "BS. Trần Thu Hà", "level": "Chuyên khoa I", "years": 9, "rating": 4.7, "city": "Hà Nội"},
     ],
     "tim mạch": [
-        {"name": "BS. Lê Quốc Bảo", "level": "Chuyên khoa II", "years": 15, "rating": 4.9},
-        {"name": "BS. Phạm Hoài Nam", "level": "Thạc sĩ", "years": 11, "rating": 4.8},
+        {"name": "BS. Lê Quốc Bảo", "level": "Chuyên khoa II", "years": 15, "rating": 4.9, "city": "Hà Nội"},
+        {"name": "BS. Phạm Hoài Nam", "level": "Thạc sĩ", "years": 11, "rating": 4.8, "city": "Hồ Chí Minh"},
     ],
     "da liễu": [
-        {"name": "BS. Võ Ngọc Linh", "level": "Chuyên khoa I", "years": 8, "rating": 4.7},
-        {"name": "BS. Đặng Minh Châu", "level": "Thạc sĩ", "years": 10, "rating": 4.8},
+        {"name": "BS. Võ Ngọc Linh", "level": "Chuyên khoa I", "years": 8, "rating": 4.7, "city": "Hà Nội"},
+        {"name": "BS. Đặng Minh Châu", "level": "Thạc sĩ", "years": 10, "rating": 4.8, "city": "Hà Nội"},
     ],
     "tai mũi họng": [
-        {"name": "BS. Huỳnh Gia Khang", "level": "Chuyên khoa I", "years": 7, "rating": 4.6},
-        {"name": "BS. Bùi Thanh Tâm", "level": "Thạc sĩ", "years": 13, "rating": 4.8},
+        {"name": "BS. Nguyễn Văn A", "level": "Chuyên khoa II", "years": 15, "rating": 4.9, "city": "Hà Nội"},
+        {"name": "BS. Huỳnh Gia Khang", "level": "Chuyên khoa I", "years": 7, "rating": 4.6, "city": "Hà Nội"},
+        {"name": "BS. Bùi Thanh Tâm", "level": "Thạc sĩ", "years": 13, "rating": 4.8, "city": "Hồ Chí Minh"},
     ],
     "nhi khoa": [
-        {"name": "BS. Mai Phương Anh", "level": "Chuyên khoa II", "years": 14, "rating": 4.9},
-        {"name": "BS. Đỗ Hoàng Phúc", "level": "Chuyên khoa I", "years": 8, "rating": 4.7},
+        {"name": "BS. Trần Thị B", "level": "Chuyên khoa II", "years": 14, "rating": 4.9, "city": "Hà Nội"},
+        {"name": "BS. Mai Phương Anh", "level": "Chuyên khoa II", "years": 14, "rating": 4.9, "city": "Hà Nội"},
+        {"name": "BS. Đỗ Hoàng Phúc", "level": "Chuyên khoa I", "years": 8, "rating": 4.7, "city": "Hồ Chí Minh"},
     ],
     "cơ xương khớp": [
-        {"name": "BS. Vũ Thành Đạt", "level": "Thạc sĩ", "years": 12, "rating": 4.8},
-        {"name": "BS. Cao Minh Đức", "level": "Chuyên khoa I", "years": 10, "rating": 4.7},
+        {"name": "PGS.TS. Nguyễn Văn Đức (Chấn thương chỉnh hình)", "level": "Phó Giáo sư", "years": 20, "rating": 5.0, "city": "Hà Nội"},
+        {"name": "BS. Vũ Thành Đạt (Chấn thương chỉnh hình)", "level": "Thạc sĩ", "years": 12, "rating": 4.8, "city": "Hà Nội"},
+        {"name": "BS. Cao Minh Đức", "level": "Chuyên khoa I", "years": 10, "rating": 4.7, "city": "Hồ Chí Minh"},
+    ],
+    "mắt": [
+        {"name": "BS. Hoàng Văn Tùng", "level": "Chuyên khoa II", "years": 16, "rating": 4.9, "city": "Hà Nội"},
+        {"name": "BS. Phạm Thị Mai", "level": "Thạc sĩ", "years": 11, "rating": 4.8, "city": "Hà Nội"},
     ],
     "tiêu hóa": [
-        {"name": "BS. Phan Nhật Minh", "level": "Chuyên khoa II", "years": 16, "rating": 4.9},
-        {"name": "BS. Lâm Bảo Ngọc", "level": "Thạc sĩ", "years": 9, "rating": 4.7},
+        {"name": "BS. Phan Nhật Minh", "level": "Chuyên khoa II", "years": 16, "rating": 4.9, "city": "Hà Nội"},
+        {"name": "BS. Lâm Bảo Ngọc", "level": "Thạc sĩ", "years": 9, "rating": 4.7, "city": "Hồ Chí Minh"},
     ],
     "sản phụ khoa": [
-        {"name": "BS. Nguyễn Hoàng Yến", "level": "Chuyên khoa II", "years": 15, "rating": 4.9},
-        {"name": "BS. Trịnh Mỹ Duyên", "level": "Thạc sĩ", "years": 11, "rating": 4.8},
+        {"name": "BS. Nguyễn Hoàng Yến", "level": "Chuyên khoa II", "years": 15, "rating": 4.9, "city": "Hà Nội"},
+        {"name": "BS. Trịnh Mỹ Duyên", "level": "Thạc sĩ", "years": 11, "rating": 4.8, "city": "Hồ Chí Minh"},
     ],
 }
 
@@ -139,6 +167,7 @@ SPECIALTY_PRICE_RANGE = {
     "tai mũi họng": (180000, 400000),
     "nhi khoa": (200000, 450000),
     "cơ xương khớp": (220000, 550000),
+    "mắt": (150000, 350000),
     "tiêu hóa": (250000, 650000),
     "sản phụ khoa": (250000, 700000),
 }
@@ -151,11 +180,11 @@ INSURANCE_PARTNERS = {
 }
 
 CARE_LEVEL_GUIDANCE = [
-    ("kho thở", "Khuyến nghị: cần đi cấp cứu hoặc gọi hỗ trợ y tế ngay."),
-    ("dau nguc", "Khuyến nghị: cần khám khẩn cấp trong ngày."),
-    ("ngat", "Khuyến nghị: nên đi cấp cứu hoặc cơ sở y tế gần nhất."),
-    ("chay mau", "Khuyến nghị: cần được đánh giá sớm trong ngày."),
-    ("sot cao", "Khuyến nghị: nên khám sớm, đặc biệt nếu kéo dài."),
+    ("kho tho", "🚨 CẤP CỨU NGUY HIỂM TÍNH MẠNG: Triệu chứng khó thở cấp tính, vã mồ hôi hột. Cần gọi ngay 115 hoặc đưa tới phòng cấp cứu gần nhất lập tức!"),
+    ("dau nguc", "🚨 CẤP CỨU NGUY HIỂM TÍNH MẠNG: Đau tức ngực dữ dội nghi ngờ nhồi máu cơ tim cấp. Cần gọi ngay 115 hoặc đến cấp cứu ngay!"),
+    ("ngat", "🚨 CẤP CỨU NGUY HIỂM TÍNH MẠNG: Ngất xỉu, mất ý thức. Cần gọi ngay 115!"),
+    ("chay mau", "CẤP CỨU KHẨN CẤP: Chảy máu nhiều cần xử lý sơ cứu và đến bệnh viện ngay."),
+    ("sot cao", "CẢNH BÁO: Sốt cao cần được khám bác sĩ và hạ sốt kịp thời."),
 ]
 
 
