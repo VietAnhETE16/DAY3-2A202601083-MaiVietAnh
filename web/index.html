@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedGeco AI — Trợ Lý Y Tế & Đặt Lịch Khám Bệnh (ReAct Agent Demo)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Medical Header -->
+        <header class="main-header">
+            <div class="header-brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-heart-pulse logo-icon"></i>
+                    <span class="pulse-ring"></span>
+                </div>
+                <div class="brand-text">
+                    <h1>MedGeco <span class="badge-tag">AI Agent</span></h1>
+                    <p class="subtitle">Trợ Lý Y Tế Smart Healthcare • ReAct Orchestration & Guardrails</p>
+                </div>
+            </div>
+
+            <div class="header-status">
+                <div class="status-item">
+                    <span class="status-indicator active"></span>
+                    <span class="status-label">LLM: <strong>GPT-4o-mini / Gemini</strong></span>
+                </div>
+                <div class="status-item">
+                    <i class="fa-solid fa-shield-halved text-emerald"></i>
+                    <span class="status-label">Guardrails: <strong class="text-emerald">Bật (MAX=3)</strong></span>
+                </div>
+                <div class="status-item">
+                    <i class="fa-solid fa-kit-medical text-teal"></i>
+                    <span class="status-label">Tools: <strong class="text-teal">6 Active</strong></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="benchmark">
+                <i class="fa-solid fa-flask-vial"></i> Test Cases & Benchmark Evaluation
+            </button>
+            <button class="tab-btn" data-tab="realtime">
+                <i class="fa-solid fa-comments"></i> Realtime Live Chat & Agent Simulator
+            </button>
+            <button class="tab-btn" data-tab="architecture">
+                <i class="fa-solid fa-diagram-project"></i> Architecture & Tool Specs
+            </button>
+        </nav>
+
+        <!-- Main Content View Container -->
+        <main class="content-area">
+            <!-- ========================================== -->
+            <!-- TAB 1: BENCHMARK EVALUATION & TEST CASES -->
+            <!-- ========================================== -->
+            <section id="tab-benchmark" class="tab-content active">
+                <!-- Metrics Bar -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon teal"><i class="fa-solid fa-list-check"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-value">10</span>
+                            <span class="metric-title">Test Cases Kiểm Thử</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon emerald"><i class="fa-solid fa-chart-line"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-value">19 / 20</span>
+                            <span class="metric-title">Điểm Agentic Fit (95%)</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon blue"><i class="fa-solid fa-clipboard-check"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-value">39 / 40</span>
+                            <span class="metric-title">Score Y Khoa ReAct (97.5%)</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon rose"><i class="fa-solid fa-shield-virus"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-value">100%</span>
+                            <span class="metric-title">An Toàn Guardrail Cấp Cứu</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Filters -->
+                <div class="filter-bar">
+                    <span class="filter-label"><i class="fa-solid fa-filter"></i> Lọc theo dạng câu hỏi:</span>
+                    <button class="filter-btn active" data-category="all">Tất cả (10)</button>
+                    <button class="filter-btn" data-category="symptom_consultation">Tư vấn triệu chứng</button>
+                    <button class="filter-btn" data-category="safety_guardrail">Cấp cứu & An toàn</button>
+                    <button class="filter-btn" data-category="appointment_booking">Đặt lịch khám</button>
+                    <button class="filter-btn" data-category="appointment_management">Đổi / Hủy lịch</button>
+                    <button class="filter-btn" data-category="information_query">FAQ & Chi phí</button>
+                </div>
+
+                <!-- Test Cases Comparison Grid -->
+                <div class="testcases-container" id="testcases-list">
+                    <!-- Cards render dynamically via JavaScript -->
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 2: REALTIME LIVE CHAT & REACT SIMULATOR -->
+            <!-- ========================================== -->
+            <section id="tab-realtime" class="tab-content">
+                <div class="chat-layout">
+                    <!-- Chat Control Panel (Sidebar) -->
+                    <aside class="chat-sidebar">
+                        <div class="sidebar-block">
+                            <h3><i class="fa-solid fa-sliders"></i> Chế độ Phản Hồi</h3>
+                            <div class="mode-selector">
+                                <label class="mode-card active" data-mode="agent">
+                                    <input type="radio" name="chatMode" value="agent" checked>
+                                    <div class="mode-details">
+                                        <div class="mode-title"><i class="fa-solid fa-brain text-teal"></i> ReAct Agent Mode</div>
+                                        <div class="mode-desc">Tự suy luận Thought ➔ Gọi Tool lấy dữ liệu ➔ Trả lời có bằng chứng.</div>
+                                    </div>
+                                </label>
+                                <label class="mode-card" data-mode="baseline">
+                                    <input type="radio" name="chatMode" value="baseline">
+                                    <div class="mode-details">
+                                        <div class="mode-title"><i class="fa-solid fa-robot text-blue"></i> Chatbot Baseline Mode</div>
+                                        <div class="mode-desc">Một LLM call thuần túy. Không gọi tool, phản hồi lý thuyết.</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="sidebar-block context-block">
+                            <h3><i class="fa-solid fa-brain text-purple"></i> Context Window Memory</h3>
+                            <div class="context-info-card">
+                                <div class="context-status">
+                                    <span class="context-dot" id="context-dot"></span>
+                                    <span id="context-status-text">Trạng thái: <strong>0 lượt chat</strong></span>
+                                </div>
+                                <p class="context-desc">Gửi lịch sử hội thoại trước đó để AI duy trì ngữ cảnh liên tục.</p>
+                                <button id="clear-context-btn" class="btn-clear-context">
+                                    <i class="fa-solid fa-broom"></i> Xóa Context Window
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="sidebar-block">
+                            <h3><i class="fa-solid fa-bolt"></i> Câu Hỏi Thử Nghiệm Nhanh</h3>
+                            <div class="preset-buttons">
+                                <button class="preset-btn emergency" data-query="Bố tôi 60 tuổi đang bị đau tức ngực dữ dội, vã mồ hôi hột và khó thở từ 10 phút trước. Đặt cho tôi lịch khám Tim mạch ngày mai.">
+                                    <i class="fa-solid fa-truck-medical"></i> 🚨 Cấp cứu đau ngực khó thở
+                                </button>
+                                <button class="preset-btn" data-query="Tôi bị đau mắt đỏ 2 ngày nay, kèm ngứa, chảy nước mắt và nhiều gèn. Tôi nên đăng ký khám khoa nào?">
+                                    <i class="fa-solid fa-eye"></i> 👁️ Đau mắt đỏ ngứa gèn
+                                </button>
+                                <button class="preset-btn" data-query="Đặt giúp tôi lịch khám Tai Mũi Họng với Bác sĩ Nguyễn Văn A vào sáng thứ 7 tuần này lúc 9:00.">
+                                    <i class="fa-solid fa-calendar-plus"></i> 🗓️ Đặt lịch khám Tai Mũi Họng
+                                </button>
+                                <button class="preset-btn" data-query="Tôi muốn đổi mã lịch hẹn #BK9823 khám Nhi khoa từ 10:00 sáng mai sang 14:00 chiều thứ Sáu.">
+                                    <i class="fa-solid fa-rotate"></i> 🔄 Đổi mã lịch hẹn #BK9823
+                                </button>
+                                <button class="preset-btn" data-query="Giá khám chuyên khoa Tim mạch là bao nhiêu? Bên mình có áp dụng Bảo hiểm y tế nhà nước không?">
+                                    <i class="fa-solid fa-hand-holding-dollar"></i> 💰 Chi phí & Bảo hiểm y tế
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- Chat Window Main -->
+                    <div class="chat-main">
+                        <div class="chat-header">
+                            <div class="chat-title">
+                                <i class="fa-solid fa-comments-dollar text-teal"></i>
+                                <span>Phòng Hỏi Đáp Y Tế Realtime — <strong>MedGeco Live Assistant</strong></span>
+                            </div>
+                            <div class="chat-header-actions">
+                                <span class="context-badge" id="chat-header-context-badge"><i class="fa-solid fa-memory"></i> Context: 0 turns</span>
+                                <button id="clear-chat-btn" class="btn-secondary small"><i class="fa-solid fa-trash-can"></i> Clear UI Chat</button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages Container -->
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Welcome Message -->
+                            <div class="message assistant-message">
+                                <div class="message-avatar"><i class="fa-solid fa-user-doctor"></i></div>
+                                <div class="message-content">
+                                    <div class="message-sender">MedGeco AI Assistant</div>
+                                    <div class="message-text">
+                                        Xin chào! Tôi là <strong>MedGeco AI</strong> — Trợ lý tư vấn y tế và hỗ trợ đặt lịch khám bệnh. Bạn có thể hỏi triệu chứng, nhờ tư vấn chuyên khoa, tra lịch bác sĩ hoặc thực hiện đặt/hủy/đổi lịch hẹn.
+                                        <br><br>
+                                        💡 <em>Hãy thử chọn một câu hỏi mẫu ở cột bên trái hoặc nhập thắc mắc của bạn bên dưới!</em>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input Box -->
+                        <div class="chat-input-area">
+                            <form id="chat-form">
+                                <input type="text" id="chat-input" placeholder="Mô tả triệu chứng hoặc nhập yêu cầu đặt/đổi lịch khám y tế..." autocomplete="off">
+                                <button type="submit" id="send-btn" class="btn-primary">
+                                    <span>Gửi</span> <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 3: ARCHITECTURE & TOOL SPECS -->
+            <!-- ========================================== -->
+            <section id="tab-architecture" class="tab-content">
+                <div class="arch-section">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-network-wired text-teal"></i> Kiến Trúc Hybrid Flowchart (Chatbot vs ReAct Agent)</h2>
+                        <p>Mô hình phân luồng thông minh xử lý câu hỏi y tế: Phân loại khẩn cấp (Emergency), câu hỏi lý thuyết (Chatbot Path) và tác vụ thực thi dữ liệu (ReAct Agent Path).</p>
+                    </div>
+
+                    <!-- Visual Flowchart Card -->
+                    <div class="flowchart-card">
+                        <div class="flowchart-diagram">
+                            <div class="flow-step start">
+                                <div class="flow-icon"><i class="fa-solid fa-circle-play"></i></div>
+                                <div class="flow-title">User Query</div>
+                                <div class="flow-desc">Nhận yêu cầu y tế từ bệnh nhân</div>
+                            </div>
+                            <div class="flow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="flow-step router">
+                                <div class="flow-icon"><i class="fa-solid fa-code-fork"></i></div>
+                                <div class="flow-title">Routing & Classification</div>
+                                <div class="flow-desc">Đánh giá tính khẩn cấp & loại tác vụ</div>
+                            </div>
+                            <div class="flow-branches">
+                                <div class="branch emergency">
+                                    <div class="branch-tag">🚨 Cấp cứu</div>
+                                    <div class="branch-box">
+                                        <h4>Emergency Guardrail</h4>
+                                        <p>Từ chối đặt lịch thường, khuyên gọi 115 ngay lập tức.</p>
+                                    </div>
+                                </div>
+                                <div class="branch chatbot">
+                                    <div class="branch-tag">💬 Lý thuyết / FAQ</div>
+                                    <div class="branch-box">
+                                        <h4>Chatbot Baseline Path</h4>
+                                        <p>1 LLM call trực tiếp, không gọi tool, giải thích tổng quát.</p>
+                                    </div>
+                                </div>
+                                <div class="branch agent">
+                                    <div class="branch-tag">🧠 Tác vụ / Data</div>
+                                    <div class="branch-box">
+                                        <h4>ReAct Agent Path</h4>
+                                        <p>Vòng lặp Thought ➔ Action ➔ Observation (Tools) ➔ Final Answer.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tool Registry Section -->
+                <div class="arch-section">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-toolbox text-teal"></i> Danh Sách Tool Contract (Medical Tool Registry)</h2>
+                        <p>Các công cụ được khai báo trong <code>src/tools.py</code> với cơ chế xử lý lỗi an toàn (bắt exception và trả về chuỗi thông báo lỗi cho LLM đọc).</p>
+                    </div>
+
+                    <div class="tools-grid">
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <span class="tool-name">suggest_specialty</span>
+                                <span class="tool-type">Consultation</span>
+                            </div>
+                            <p class="tool-desc">Phân tích cụm triệu chứng người dùng mô tả và gợi ý chuyên khoa phù hợp.</p>
+                            <div class="tool-spec">
+                                <div><strong>Input:</strong> <code>symptom_summary: str</code></div>
+                                <div><strong>Output:</strong> <code>Chuyên khoa gợi ý & Lý do</code></div>
+                            </div>
+                        </div>
+
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <span class="tool-name">check_appointment_slots</span>
+                                <span class="tool-type">Lookup</span>
+                            </div>
+                            <p class="tool-desc">Tra cứu các khung giờ khám còn trống theo chuyên khoa, địa điểm và ngày cụ thể.</p>
+                            <div class="tool-spec">
+                                <div><strong>Input:</strong> <code>specialty: str, city: str, date: str</code></div>
+                                <div><strong>Output:</strong> <code>Danh sách slot HH:MM còn trống</code></div>
+                            </div>
+                        </div>
+
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <span class="tool-name">book_medical_appointment</span>
+                                <span class="tool-type">Action</span>
+                            </div>
+                            <p class="tool-desc">Thực hiện tạo lịch hẹn khám bệnh chính thức và sinh mã xác nhận BK-XXXXXXXXXX.</p>
+                            <div class="tool-spec">
+                                <div><strong>Input:</strong> <code>patient_name, specialty, city, date, time, phone</code></div>
+                                <div><strong>Output:</strong> <code>Mã đặt lịch & Xác nhận</code></div>
+                            </div>
+                        </div>
+
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <span class="tool-name">list_doctors_by_specialty</span>
+                                <span class="tool-type">Lookup</span>
+                            </div>
+                            <p class="tool-desc">Tra cứu danh sách bác sĩ, học hàm/học vị, năm kinh nghiệm và đánh giá.</p>
+                            <div class="tool-spec">
+                                <div><strong>Input:</strong> <code>specialty: str</code></div>
+                                <div><strong>Output:</strong> <code>Danh sách bác sĩ mẫu kèm kinh nghiệm</code></div>
+                            </div>
+                        </div>
+
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <span class="tool-name">reschedule_appointment</span>
+                                <span class="tool-type">Management</span>
+                            </div>
+                            <p class="tool-desc">Đổi ngày/giờ hẹn theo mã đặt lịch BK-XXXXXXXXXX sẵn có.</p>
+                            <div class="tool-spec">
+                                <div><strong>Input:</strong> <code>booking_code, new_date, new_time</code></div>
+                                <div><strong>Output:</strong> <code>Thông báo đổi lịch thành công / Lỗi mã</code></div>
+                            </div>
+                        </div>
+
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <span class="tool-name">cancel_appointment</span>
+                                <span class="tool-type">Management</span>
+                            </div>
+                            <p class="tool-desc">Hủy lịch hẹn đã đăng ký theo mã đặt lịch và lưu lý do.</p>
+                            <div class="tool-spec">
+                                <div><strong>Input:</strong> <code>booking_code, reason: str</code></div>
+                                <div><strong>Output:</strong> <code>Xác nhận hủy lịch</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <p><strong>MedGeco AI Agent</strong> • VinUni AI Codelab × GDGoC • Day 3 Lab Demo</p>
+            <p class="sub-footer">Phát triển bởi Nhóm Đề Tài 6 (Role 5 Observability & AI Agent Engineering)</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
