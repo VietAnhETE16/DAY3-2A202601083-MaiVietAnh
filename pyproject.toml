@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "anthropic",
+    "fastapi>=0.140.7",
     "google-genai",
     "openai",
     "python-dotenv",
