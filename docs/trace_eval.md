@@ -139,5 +139,57 @@ Dưới đây là điểm số đánh giá y khoa của ReAct Agent trên 5 Test
 
 ## ⚔️ MỐC 4 — HYBRID FLOWCHART
 
-*(Xem file `docs/hybrid_flowchart.mermaid`)*
+*(Xem chi tiết tại file [hybrid_flowchart.mermaid](file:///c:/Users/VIET%20ANH/Desktop/DAY3-2A202601083-MaiVietAnh/docs/hybrid_flowchart.mermaid))*
+
+```mermaid
+flowchart TD
+    %% Định nghĩa Style màu sắc trực quan
+    classDef start fill:#1d3557,stroke:#f1faee,stroke-width:2px,color:#fff;
+    classDef warning fill:#e63946,stroke:#f1faee,stroke-width:2px,color:#fff;
+    classDef chatbot fill:#457b9d,stroke:#f1faee,stroke-width:2px,color:#fff;
+    classDef agent fill:#2a9d8f,stroke:#264653,stroke-width:2px,color:#fff;
+    classDef tool fill:#e9c46a,stroke:#264653,stroke-width:2px,color:#000;
+    classDef endNode fill:#e76f51,stroke:#264653,stroke-width:2px,color:#fff;
+
+    Start([Bắt đầu: Nhận Yêu cầu từ Bệnh nhân]) --> RouteDecision{Phân loại câu hỏi / Routing}:::start
+
+    %% Nhánh 1: Cảnh báo khẩn cấp (Emergency)
+    RouteDecision -- "Tình huống cấp cứu (Đau ngực, khó thở...)" --> EmergencyFilter[Kích hoạt Cảnh báo khẩn cấp]:::warning
+    EmergencyFilter --> EmergencyResponse([Cảnh báo y tế nguy hiểm & Từ chối đặt lịch thường quy]):::endNode
+
+    %% Nhánh 2: Câu hỏi lý thuyết thông thường (Chatbot Baseline Path)
+    RouteDecision -- "Tư vấn tổng quát / FAQ lý thuyết" --> ChatbotBaseline[Chatbot Baseline Path]:::chatbot
+    ChatbotBaseline --> ChatbotLLM[Sinh câu trả lời từ LLM trực tiếp - 0 lần gọi Tool]:::chatbot
+    ChatbotLLM --> ChatbotOutput([Hồi đáp thông tin tham khảo]):::endNode
+
+    %% Nhánh 3: Tác vụ nghiệp vụ cần dữ liệu thực (ReAct Agent Path)
+    RouteDecision -- "Cần đặt/hủy/đổi lịch hoặc tra cứu thời gian thực" --> ReActAgent[ReAct Agent Path]:::agent
+    ReActAgent --> LoopCheck{Vòng lặp ReAct Loop <br> Step < MAX_ITERATIONS?}:::agent
+
+    %% Các bước trong vòng lặp ReAct
+    LoopCheck -- "Còn lượt (Yes)" --> ThoughtStep[Thought: Suy nghĩ bước đi tiếp theo]:::agent
+    ThoughtStep --> ActionDecide{Quyết định hành động?}:::agent
+
+    %% Quyết định Action gọi Tool
+    ActionDecide -- "Yêu cầu gọi Tool" --> ToolExecution[Mở Registry gọi hàm trong src/tools.py]:::tool
+    
+    %% Các Tools nghiệp vụ chính
+    subgraph MedicalTools [Bộ Công Cụ Y Tế Thực Tế]
+        suggest_specialty[suggest_specialty]:::tool
+        check_appointment_slots[check_appointment_slots]:::tool
+        book_medical_appointment[book_medical_appointment]:::tool
+        reschedule_appointment[reschedule_appointment]:::tool
+        cancel_appointment[cancel_appointment]:::tool
+    end
+    
+    ToolExecution --> MedicalTools
+    MedicalTools --> ObservationStep[Observation: Nhận kết quả từ Tool trả về]:::tool
+    ObservationStep --> |Ghi nhận vào lịch sử hội thoại| LoopCheck
+
+    %% Kết thúc hoặc chạm phanh Guardrail
+    LoopCheck -- "Hết lượt (No)" --> GuardrailFallback[Guardrail: Kích hoạt ngắt lặp an toàn]:::warning
+    GuardrailFallback --> FallbackOutput([Hồi đáp lời xin lỗi lịch sự & Hướng dẫn hotline]):::endNode
+
+    ActionDecide -- "Trả Final Answer" --> AgentOutput([Hồi đáp kết quả chính xác có bằng chứng y khoa]):::endNode
+```
 
