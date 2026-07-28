@@ -4,8 +4,6 @@ Bộ tool cho chủ đề 6: Đặt lịch khám bệnh & tư vấn chuyên khoa
 
 Ghi chú:
 - Các tool y tế bên dưới là bộ tool chính cho đề tài.
-- `get_weather` và `search_flights` được giữ lại như tool mẫu tương thích
-  để file `src/app.py` hiện tại không bị vỡ import trước khi Role 4 đồng bộ.
 """
 
 from __future__ import annotations
@@ -13,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import re
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def _normalize_text(value: str) -> str:
@@ -42,6 +40,18 @@ def _contains_keyword(text: str, keyword: str) -> bool:
     """Khớp từ khóa theo cụm từ hoặc theo ranh giới từ để tránh bắt nhầm."""
     pattern = r"\b" + re.escape(keyword) + r"\b"
     return bool(re.search(pattern, text))
+
+
+def _match_specialty(specialty: str) -> str | None:
+    specialty_key = _normalize_text(specialty)
+    for canonical in SPECIALTY_DATABASE:
+        if _normalize_text(canonical) == specialty_key:
+            return canonical
+    return None
+
+
+def _valid_booking_code(value: str) -> bool:
+    return bool(re.fullmatch(r"BK-[A-F0-9]{10}", value.strip().upper()))
 
 
 SPECIALTY_DATABASE = {
@@ -85,6 +95,59 @@ SPECIALTY_DATABASE = {
         "description": "Tư vấn sức khỏe phụ nữ, thai kỳ và sản phụ khoa.",
         "clinics": ["Phòng khám Sản Phụ khoa An Khang", "Trung tâm Chăm sóc Mẹ và Bé"],
     },
+}
+
+DOCTOR_DATABASE = {
+    "nội khoa": [
+        {"name": "BS. Nguyễn Minh An", "level": "Thạc sĩ", "years": 12, "rating": 4.8},
+        {"name": "BS. Trần Thu Hà", "level": "Chuyên khoa I", "years": 9, "rating": 4.7},
+    ],
+    "tim mạch": [
+        {"name": "BS. Lê Quốc Bảo", "level": "Chuyên khoa II", "years": 15, "rating": 4.9},
+        {"name": "BS. Phạm Hoài Nam", "level": "Thạc sĩ", "years": 11, "rating": 4.8},
+    ],
+    "da liễu": [
+        {"name": "BS. Võ Ngọc Linh", "level": "Chuyên khoa I", "years": 8, "rating": 4.7},
+        {"name": "BS. Đặng Minh Châu", "level": "Thạc sĩ", "years": 10, "rating": 4.8},
+    ],
+    "tai mũi họng": [
+        {"name": "BS. Huỳnh Gia Khang", "level": "Chuyên khoa I", "years": 7, "rating": 4.6},
+        {"name": "BS. Bùi Thanh Tâm", "level": "Thạc sĩ", "years": 13, "rating": 4.8},
+    ],
+    "nhi khoa": [
+        {"name": "BS. Mai Phương Anh", "level": "Chuyên khoa II", "years": 14, "rating": 4.9},
+        {"name": "BS. Đỗ Hoàng Phúc", "level": "Chuyên khoa I", "years": 8, "rating": 4.7},
+    ],
+    "cơ xương khớp": [
+        {"name": "BS. Vũ Thành Đạt", "level": "Thạc sĩ", "years": 12, "rating": 4.8},
+        {"name": "BS. Cao Minh Đức", "level": "Chuyên khoa I", "years": 10, "rating": 4.7},
+    ],
+    "tiêu hóa": [
+        {"name": "BS. Phan Nhật Minh", "level": "Chuyên khoa II", "years": 16, "rating": 4.9},
+        {"name": "BS. Lâm Bảo Ngọc", "level": "Thạc sĩ", "years": 9, "rating": 4.7},
+    ],
+    "sản phụ khoa": [
+        {"name": "BS. Nguyễn Hoàng Yến", "level": "Chuyên khoa II", "years": 15, "rating": 4.9},
+        {"name": "BS. Trịnh Mỹ Duyên", "level": "Thạc sĩ", "years": 11, "rating": 4.8},
+    ],
+}
+
+SPECIALTY_PRICE_RANGE = {
+    "nội khoa": (150000, 350000),
+    "tim mạch": (250000, 600000),
+    "da liễu": (180000, 450000),
+    "tai mũi họng": (180000, 400000),
+    "nhi khoa": (200000, 450000),
+    "cơ xương khớp": (220000, 550000),
+    "tiêu hóa": (250000, 650000),
+    "sản phụ khoa": (250000, 700000),
+}
+
+INSURANCE_PARTNERS = {
+    "bảo việt": "Hỗ trợ bảo lãnh viện phí tại quầy tiếp nhận.",
+    "pvi": "Hỗ trợ xác minh quyền lợi trước khi khám.",
+    "bảo minh": "Có thể áp dụng thanh toán một phần theo gói bảo hiểm.",
+    "vbi": "Hỗ trợ hồ sơ bồi thường sau khám.",
 }
 
 CARE_LEVEL_GUIDANCE = [
@@ -311,49 +374,283 @@ def book_medical_appointment(
     )
 
 
-# -------- Legacy demo tools: giữ tương thích với app hiện tại --------
-def get_weather(location: str) -> str:
-    """
-    Tra cứu thời tiết hiện tại của một thành phố.
-
-    Args:
-        location (str): Tên thành phố.
-
-    Returns:
-        str: Thông tin thời tiết mô phỏng hoặc thông báo lỗi.
-    """
-    loc_lower = _normalize_text(location)
-    if "ha noi" in loc_lower:
-        return "Thời tiết Hà Nội: 28°C, Nắng nhẹ, Độ ẩm 65%."
-    if "ho chi minh" in loc_lower or "tp.hcm" in loc_lower or "hcm" in loc_lower:
-        return "Thời tiết TP.HCM: 33°C, Nắng nóng, Có mây."
-    if "da nang" in loc_lower:
-        return "Thời tiết Đà Nẵng: 30°C, Gió nhẹ, Mát mẻ."
-    return f"LỖI: Không tìm thấy dữ liệu thời tiết cho địa điểm '{location}'."
+def list_specialties() -> str:
+    """Liệt kê các chuyên khoa đang hỗ trợ."""
+    lines = []
+    for specialty, meta in SPECIALTY_DATABASE.items():
+        lines.append(f"- {specialty}: {meta['description']}")
+    return "Danh sách chuyên khoa hỗ trợ:\n" + "\n".join(lines)
 
 
-def search_flights(origin: str, destination: str) -> str:
-    """
-    Tra cứu chuyến bay giữa hai địa điểm.
+def get_specialty_details(specialty: str) -> str:
+    """Trả về mô tả, cơ sở gợi ý và từ khóa nhận diện cho một chuyên khoa."""
+    ok, specialty_value = _ensure_non_empty(specialty, "specialty")
+    if not ok:
+        return specialty_value
 
-    Args:
-        origin (str): Nơi đi.
-        destination (str): Nơi đến.
+    matched = _match_specialty(specialty_value)
+    if not matched:
+        return (
+            f"LỖI: Chưa có dữ liệu cho chuyên khoa '{specialty_value}'. "
+            f"Các chuyên khoa hợp lệ gồm: {', '.join(SPECIALTY_DATABASE.keys())}."
+        )
 
-    Returns:
-        str: Danh sách chuyến bay mô phỏng.
-    """
-    ok_origin, origin_value = _ensure_non_empty(origin, "origin")
-    if not ok_origin:
-        return origin_value
-    ok_destination, destination_value = _ensure_non_empty(destination, "destination")
-    if not ok_destination:
-        return destination_value
+    meta = SPECIALTY_DATABASE[matched]
+    keywords = ", ".join(meta["keywords"])
+    clinics = "; ".join(meta["clinics"])
+    return (
+        f"Chuyên khoa: {matched}\n"
+        f"Mô tả: {meta['description']}\n"
+        f"Từ khóa: {keywords}\n"
+        f"Gợi ý cơ sở: {clinics}"
+    )
+
+
+def estimate_consultation_fee(specialty: str, city: str = "") -> str:
+    """Ước tính khoảng phí khám ban đầu theo chuyên khoa."""
+    ok, specialty_value = _ensure_non_empty(specialty, "specialty")
+    if not ok:
+        return specialty_value
+
+    matched = _match_specialty(specialty_value)
+    if not matched:
+        return (
+            f"LỖI: Chưa có bảng phí cho chuyên khoa '{specialty_value}'. "
+            f"Các chuyên khoa hợp lệ gồm: {', '.join(SPECIALTY_DATABASE.keys())}."
+        )
+
+    min_fee, max_fee = SPECIALTY_PRICE_RANGE.get(matched, (150000, 500000))
+    city_note = f" tại {city.strip()}" if city.strip() else ""
+    return (
+        f"Ước tính phí khám {matched}{city_note}: "
+        f"{min_fee:,} - {max_fee:,} VNĐ."
+    )
+
+
+def list_doctors_by_specialty(specialty: str) -> str:
+    """Liệt kê bác sĩ mẫu theo chuyên khoa."""
+    ok, specialty_value = _ensure_non_empty(specialty, "specialty")
+    if not ok:
+        return specialty_value
+
+    matched = _match_specialty(specialty_value)
+    if not matched:
+        return (
+            f"LỖI: Chưa có dữ liệu bác sĩ cho chuyên khoa '{specialty_value}'. "
+            f"Các chuyên khoa hợp lệ gồm: {', '.join(SPECIALTY_DATABASE.keys())}."
+        )
+
+    doctors = DOCTOR_DATABASE.get(matched, [])
+    if not doctors:
+        return f"Chưa có danh sách bác sĩ mẫu cho chuyên khoa {matched}."
+
+    lines = []
+    for idx, doctor in enumerate(doctors, start=1):
+        lines.append(
+            f"{idx}. {doctor['name']} - {doctor['level']} - {doctor['years']} năm kinh nghiệm - "
+            f"đánh giá {doctor['rating']}/5"
+        )
+    return f"Danh sách bác sĩ gợi ý cho {matched}:\n" + "\n".join(lines)
+
+
+def prepare_before_visit(specialty: str, symptoms: str = "") -> str:
+    """Gợi ý việc cần chuẩn bị trước khi đi khám."""
+    ok, specialty_value = _ensure_non_empty(specialty, "specialty")
+    if not ok:
+        return specialty_value
+
+    matched = _match_specialty(specialty_value)
+    if not matched:
+        return (
+            f"LỖI: Chưa có hướng dẫn chuẩn bị cho chuyên khoa '{specialty_value}'. "
+            f"Các chuyên khoa hợp lệ gồm: {', '.join(SPECIALTY_DATABASE.keys())}."
+        )
+
+    base_items = [
+        "CCCD hoặc giấy tờ tùy thân",
+        "Bảo hiểm y tế/bảo hiểm tư nhân nếu có",
+        "Danh sách thuốc đang dùng",
+        "Kết quả xét nghiệm hoặc chẩn đoán cũ",
+    ]
+    if symptoms.strip():
+        base_items.append(f"Ghi chú triệu chứng: {symptoms.strip()}")
+    if matched in {"nội khoa", "tiêu hóa"}:
+        base_items.append("Nên nhịn ăn nếu được cơ sở y tế yêu cầu trước khi làm xét nghiệm")
+    elif matched in {"sản phụ khoa", "nhi khoa"}:
+        base_items.append("Mang theo sổ khám thai hoặc sổ tiêm chủng nếu có")
+
+    return "Chuẩn bị trước khi khám:\n" + "\n".join(f"- {item}" for item in base_items)
+
+
+def teleconsultation_available(specialty: str) -> str:
+    """Thông báo khả năng tư vấn từ xa cho chuyên khoa."""
+    ok, specialty_value = _ensure_non_empty(specialty, "specialty")
+    if not ok:
+        return specialty_value
+
+    matched = _match_specialty(specialty_value)
+    if not matched:
+        return (
+            f"LỖI: Chưa có dữ liệu tư vấn online cho chuyên khoa '{specialty_value}'. "
+            f"Các chuyên khoa hợp lệ gồm: {', '.join(SPECIALTY_DATABASE.keys())}."
+        )
+
+    supported = {
+        "nội khoa",
+        "da liễu",
+        "tai mũi họng",
+        "tiêu hóa",
+        "sản phụ khoa",
+    }
+    if matched in supported:
+        return (
+            f"Chuyên khoa {matched} hỗ trợ tư vấn từ xa cho các tình huống theo dõi ban đầu "
+            f"hoặc tái khám đơn giản."
+        )
+    return f"Chuyên khoa {matched} nên ưu tiên khám trực tiếp trước khi tư vấn từ xa."
+
+
+def reschedule_appointment(booking_code: str, new_date: str, new_time: str) -> str:
+    """Đổi lịch hẹn theo mã đặt lịch giả lập."""
+    ok_code, code_value = _ensure_non_empty(booking_code, "booking_code")
+    if not ok_code:
+        return code_value
+    if not _valid_booking_code(code_value):
+        return "LỖI: Mã đặt lịch không hợp lệ. Định dạng phải là BK-XXXXXXXXXX."
+
+    ok_date, date_value = _ensure_non_empty(new_date, "new_date")
+    if not ok_date:
+        return date_value
+    if not _valid_date(date_value):
+        return f"LỖI: Ngày mới '{date_value}' phải theo định dạng YYYY-MM-DD."
+
+    ok_time, time_value = _ensure_non_empty(new_time, "new_time")
+    if not ok_time:
+        return time_value
+    if not _valid_time(time_value):
+        return f"LỖI: Giờ mới '{time_value}' phải theo định dạng HH:MM."
 
     return (
-        f"Chuyến bay từ {origin_value} -> {destination_value} ngày mai:\n"
-        f"1. VN123 (08:00) - Giá: 1,500,000 VNĐ (Còn vé)\n"
-        f"2. VJ456 (14:30) - Giá: 1,200,000 VNĐ (Còn vé)"
+        f"Đổi lịch thành công.\n"
+        f"Mã đặt lịch: {code_value.upper()}\n"
+        f"Thời gian mới: {date_value} {time_value}\n"
+        f"Trạng thái: Đã ghi nhận yêu cầu đổi lịch, chờ cơ sở y tế xác nhận."
+    )
+
+
+def cancel_appointment(booking_code: str, reason: str = "") -> str:
+    """Hủy lịch hẹn giả lập."""
+    ok_code, code_value = _ensure_non_empty(booking_code, "booking_code")
+    if not ok_code:
+        return code_value
+    if not _valid_booking_code(code_value):
+        return "LỖI: Mã đặt lịch không hợp lệ. Định dạng phải là BK-XXXXXXXXXX."
+
+    note = f" Lý do: {reason.strip()}." if reason.strip() else ""
+    return (
+        f"Hủy lịch thành công.\n"
+        f"Mã đặt lịch: {code_value.upper()}\n"
+        f"Trạng thái: Lịch hẹn đã bị hủy.{note}"
+    )
+
+
+def appointment_reminder(patient_name: str, date: str, time: str, specialty: str = "") -> str:
+    """Tạo nhắc lịch khám."""
+    ok_name, name_value = _ensure_non_empty(patient_name, "patient_name")
+    if not ok_name:
+        return name_value
+    ok_date, date_value = _ensure_non_empty(date, "date")
+    if not ok_date:
+        return date_value
+    if not _valid_date(date_value):
+        return f"LỖI: Ngày nhắc lịch '{date_value}' phải theo định dạng YYYY-MM-DD."
+    ok_time, time_value = _ensure_non_empty(time, "time")
+    if not ok_time:
+        return time_value
+    if not _valid_time(time_value):
+        return f"LỖI: Giờ nhắc lịch '{time_value}' phải theo định dạng HH:MM."
+
+    specialty_note = f" chuyên khoa {specialty.strip()}" if specialty.strip() else ""
+    return (
+        f"Nhắc lịch cho {name_value}{specialty_note}: {date_value} lúc {time_value}. "
+        f"Vui lòng đến sớm 15 phút và mang theo giấy tờ cần thiết."
+    )
+
+
+def clinic_directions(city: str, specialty: str) -> str:
+    """Gợi ý địa điểm khám theo khu vực và chuyên khoa."""
+    ok_city, city_value = _ensure_non_empty(city, "city")
+    if not ok_city:
+        return city_value
+    ok_spec, specialty_value = _ensure_non_empty(specialty, "specialty")
+    if not ok_spec:
+        return specialty_value
+
+    matched = _match_specialty(specialty_value)
+    if not matched:
+        return (
+            f"LỖI: Chưa có dữ liệu cơ sở cho chuyên khoa '{specialty_value}'. "
+            f"Các chuyên khoa hợp lệ gồm: {', '.join(SPECIALTY_DATABASE.keys())}."
+        )
+
+    clinics = "; ".join(SPECIALTY_DATABASE[matched]["clinics"])
+    return f"Gợi ý cơ sở khám {matched} tại {city_value}: {clinics}."
+
+
+def insurance_support(provider: str) -> str:
+    """Tra cứu hỗ trợ bảo hiểm mẫu."""
+    ok, provider_value = _ensure_non_empty(provider, "provider")
+    if not ok:
+        return provider_value
+
+    normalized = _normalize_text(provider_value)
+    for key, policy in INSURANCE_PARTNERS.items():
+        if key in normalized:
+            return f"Nhà bảo hiểm {provider_value}: {policy}"
+    return (
+        f"Chưa có cấu hình hỗ trợ cho '{provider_value}'. "
+        f"Đơn vị hiện có: {', '.join(INSURANCE_PARTNERS.keys())}."
+    )
+
+
+def validate_symptom_urgency(symptom_summary: str) -> str:
+    """Đánh giá sơ bộ mức độ khẩn cấp từ mô tả triệu chứng."""
+    ok, cleaned = _ensure_non_empty(symptom_summary, "symptom_summary")
+    if not ok:
+        return cleaned
+
+    normalized = _normalize_text(cleaned)
+    for keyword, guidance in CARE_LEVEL_GUIDANCE:
+        if _contains_keyword(normalized, keyword):
+            return f"Mức độ ưu tiên: cao. {guidance}"
+    return "Mức độ ưu tiên: thường quy. Có thể đặt lịch khám chuyên khoa phù hợp."
+
+
+def next_available_dates(specialty: str, city: str) -> str:
+    """Trả về ngày khám giả lập sắp tới cho chuyên khoa."""
+    ok_spec, specialty_value = _ensure_non_empty(specialty, "specialty")
+    if not ok_spec:
+        return specialty_value
+    ok_city, city_value = _ensure_non_empty(city, "city")
+    if not ok_city:
+        return city_value
+
+    matched = _match_specialty(specialty_value)
+    if not matched:
+        return (
+            f"LỖI: Chưa có lịch cho chuyên khoa '{specialty_value}'. "
+            f"Các chuyên khoa hợp lệ gồm: {', '.join(SPECIALTY_DATABASE.keys())}."
+        )
+
+    today = datetime.now().date()
+    results = []
+    for offset in (1, 3, 5):
+        candidate = today + timedelta(days=offset)
+        results.append(candidate.strftime("%Y-%m-%d"))
+
+    return (
+        f"Ngày gợi ý còn trống cho {matched} tại {city_value}: "
+        f"{', '.join(results)}."
     )
 
 
@@ -362,6 +659,17 @@ AVAILABLE_TOOLS = {
     "find_specialists": find_specialists,
     "check_appointment_slots": check_appointment_slots,
     "book_medical_appointment": book_medical_appointment,
-    "get_weather": get_weather,
-    "search_flights": search_flights,
+    "list_specialties": list_specialties,
+    "get_specialty_details": get_specialty_details,
+    "estimate_consultation_fee": estimate_consultation_fee,
+    "list_doctors_by_specialty": list_doctors_by_specialty,
+    "prepare_before_visit": prepare_before_visit,
+    "teleconsultation_available": teleconsultation_available,
+    "reschedule_appointment": reschedule_appointment,
+    "cancel_appointment": cancel_appointment,
+    "appointment_reminder": appointment_reminder,
+    "clinic_directions": clinic_directions,
+    "insurance_support": insurance_support,
+    "validate_symptom_urgency": validate_symptom_urgency,
+    "next_available_dates": next_available_dates,
 }
