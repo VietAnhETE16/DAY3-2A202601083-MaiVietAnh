@@ -21,19 +21,21 @@
 
 | Tình huống người dùng | Chatbot thuần làm được? | ReAct Agent làm được? |
 | :--- | :---: | :---: |
-| "Tôi bị đau đầu chóng mặt, nên khám chuyên khoa gì?" | ⚠️ Chỉ trả lời chung chung, không tra cứu dữ liệu thực | ✅ Gọi `get_specialty_by_symptom()` → trả kết quả có bằng chứng |
-| "Bác sĩ Nguyễn còn lịch ngày mai không?" | ❌ Bịa số liệu / từ chối trả lời | ✅ Gọi `check_doctor_schedule()` → trả lịch thực tế |
-| "Đặt cho tôi lịch khám lúc 9h sáng thứ 3" | ❌ Không thể thực thi hành động đặt lịch | ✅ Gọi `book_appointment()` → xác nhận đặt thật |
+| "Tôi bị đau đầu chóng mặt, nên khám chuyên khoa gì?" | ⚠️ Chỉ trả lời chung chung, không tra cứu dữ liệu thực | ✅ Gọi `suggest_specialty()` → trả kết quả có bằng chứng |
+| "Bác sĩ Nguyễn còn lịch ngày mai không?" | ❌ Bịa số liệu / từ chối trả lời | ✅ Gọi `check_appointment_slots()` → trả lịch thực tế |
+| "Đặt cho tôi lịch khám lúc 9h sáng thứ 3" | ❌ Không thể thực thi hành động đặt lịch | ✅ Gọi `book_medical_appointment()` → xác nhận đặt thật |
 | "Bác sĩ A hết slot, đổi sang bác sĩ B được không?" | ❌ Không biết slot trống, không thể quyết định linh hoạt | ✅ Vòng lặp Thought → Action → Observation tự điều chỉnh |
 
-### Danh sách Tool dự kiến (Role 2 sẽ implement)
+### Danh sách Tool thực tế (đã implement trong src/tools.py)
 
 | Tên Tool | Input | Output | Mục đích |
 | :--- | :--- | :--- | :--- |
-| `get_specialty_by_symptom(symptom)` | Triệu chứng (str) | Tên chuyên khoa phù hợp | Tư vấn khám đúng nơi |
-| `check_doctor_schedule(specialty, date)` | Chuyên khoa + ngày | Danh sách slot trống của bác sĩ | Tra lịch bác sĩ còn trống |
-| `book_appointment(doctor_id, patient_name, date, time)` | ID bác sĩ + tên BN + ngày + giờ | Mã xác nhận đặt lịch | Đặt lịch khám chính thức |
-| `get_doctor_info(doctor_id)` | ID bác sĩ | Hồ sơ bác sĩ (tên, chuyên khoa, kinh nghiệm) | Cung cấp thông tin để người dùng lựa chọn |
+| `suggest_specialty(symptom_summary)` | Triệu chứng (str) | Tên chuyên khoa gợi ý | Tư vấn chuyên khoa dựa trên triệu chứng |
+| `check_appointment_slots(specialty, city, date)` | Chuyên khoa + Khu vực + Ngày | Các khung giờ còn trống | Tra lịch khám trống |
+| `book_medical_appointment(patient_name, specialty, city, date, time, ...)` | Tên BN + Chuyên khoa + Khu vực + Ngày + Giờ | Mã đặt lịch và thông tin xác nhận | Đặt lịch khám chính thức |
+| `list_doctors_by_specialty(specialty)` | Tên chuyên khoa | Danh sách bác sĩ, trình độ, kinh nghiệm | Hỗ trợ lựa chọn bác sĩ |
+| `reschedule_appointment(booking_code, new_date, new_time)` | Mã đặt lịch + Ngày mới + Giờ mới | Xác nhận thay đổi lịch | Đổi lịch khám |
+| `cancel_appointment(booking_code, reason)` | Mã đặt lịch + Lý do | Xác nhận hủy lịch | Hủy lịch khám |
 
 ---
 
