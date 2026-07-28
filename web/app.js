@@ -368,13 +368,66 @@ function renderTestCases(cases) {
     });
 }
 
+// Context Window Memory State
+let chatHistoryContext = [];
+
+function updateContextUI() {
+    const turns = Math.floor(chatHistoryContext.length / 2);
+    const statusText = document.getElementById("context-status-text");
+    const dot = document.getElementById("context-dot");
+    const badge = document.getElementById("chat-header-context-badge");
+
+    if (statusText) {
+        statusText.innerHTML = turns > 0 
+            ? `Trạng thái: <strong class="text-purple">${turns} lượt (${chatHistoryContext.length} msgs)</strong>`
+            : `Trạng thái: <strong>0 lượt (Rỗng)</strong>`;
+    }
+
+    if (dot) {
+        if (turns > 0) dot.classList.add("active");
+        else dot.classList.remove("active");
+    }
+
+    if (badge) {
+        badge.innerHTML = `<i class="fa-solid fa-memory"></i> Context: ${turns} turns`;
+    }
+}
+
 // 5. LIVE CHAT SIMULATOR ENGINE
 function initChatSimulator() {
     const chatForm = document.getElementById("chat-form");
     const chatInput = document.getElementById("chat-input");
     const chatMessages = document.getElementById("chat-messages");
     const clearBtn = document.getElementById("clear-chat-btn");
+    const clearContextBtn = document.getElementById("clear-context-btn");
     const presetBtns = document.querySelectorAll(".preset-btn");
+
+    updateContextUI();
+
+    // Clear Context Window Memory Button
+    if (clearContextBtn) {
+        clearContextBtn.addEventListener("click", () => {
+            chatHistoryContext = [];
+            updateContextUI();
+
+            fetch("/api/reset_context", { method: "POST" }).catch(() => {});
+
+            // System Alert Message in Chat
+            const alertMsg = document.createElement("div");
+            alertMsg.className = "message assistant-message";
+            alertMsg.innerHTML = `
+                <div class="message-avatar" style="background:linear-gradient(135deg, #8b5cf6, #6d28d9);"><i class="fa-solid fa-broom"></i></div>
+                <div class="message-content">
+                    <div class="message-sender">Hệ Thống MedGeco Memory</div>
+                    <div class="message-text" style="border-left: 3px solid var(--purple-500); color: #d8b4fe;">
+                        🧠 <strong>Context Window đã được xóa rỗng!</strong> Lịch sử hội thoại trước đây đã được reset. AI bắt đầu phiên làm việc mới độc lập.
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(alertMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
 
     // Preset buttons click
     presetBtns.forEach(btn => {
@@ -400,7 +453,7 @@ function initChatSimulator() {
                 <div class="message-avatar"><i class="fa-solid fa-user-doctor"></i></div>
                 <div class="message-content">
                     <div class="message-sender">MedGeco AI Assistant</div>
-                    <div class="message-text">Lịch sử chat đã được dọn dẹp. Vui lòng đặt câu hỏi mới!</div>
+                    <div class="message-text">Khung hiển thị chat đã được làm sạch. (Lưu ý: Bộ nhớ Context Window vẫn được duy trì trừ khi bấm 'Xóa Context Window').</div>
                 </div>
             </div>
         `;
@@ -424,7 +477,11 @@ function submitQuery(query) {
     fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query, mode: mode })
+        body: JSON.stringify({ 
+            query: query, 
+            mode: mode,
+            history: chatHistoryContext 
+        })
     })
     .then(res => {
         if (!res.ok) throw new Error("HTTP status " + res.status);
@@ -432,19 +489,30 @@ function submitQuery(query) {
     })
     .then(data => {
         removeTypingIndicator(typingId);
+        let answer = "";
         if (data.mode === "agent") {
-            const answer = data.finalAnswer || data.response || "Không nhận được phản hồi từ hệ thống.";
+            answer = data.finalAnswer || data.response || "Không nhận được phản hồi từ hệ thống.";
             appendAgentMessage(answer, data.trace || []);
         } else {
-            const answer = data.response || data.finalAnswer || "Không nhận được phản hồi từ hệ thống.";
+            answer = data.response || data.finalAnswer || "Không nhận được phản hồi từ hệ thống.";
             appendBaselineMessage(answer);
         }
+
+        // Save to Context Window Memory
+        chatHistoryContext.push({ role: "user", content: query });
+        chatHistoryContext.push({ role: "assistant", content: answer });
+        updateContextUI();
     })
     .catch(err => {
         console.warn("API Backend error, falling back to intelligent simulator:", err);
         setTimeout(() => {
             removeTypingIndicator(typingId);
-            simulateClientResponse(query, mode);
+            const simAnswer = simulateClientResponse(query, mode);
+            
+            // Save to Context Window Memory in simulation mode
+            chatHistoryContext.push({ role: "user", content: query });
+            chatHistoryContext.push({ role: "assistant", content: simAnswer });
+            updateContextUI();
         }, 500);
     });
 }
@@ -540,30 +608,34 @@ function appendAgentMessage(finalAnswer, trace = []) {
 // Client-side Fallback Simulation Engine
 function simulateClientResponse(query, mode) {
     const qLower = query.lower ? query.lower() : query.toLowerCase();
-
-    // Check if query matches any known test case
     const matched = TEST_CASES_DATA.find(tc => qLower.includes(tc.userInput.toLowerCase().substring(0, 15)));
+
+    let responseText = "";
 
     if (mode === "baseline") {
         if (matched) {
-            appendBaselineMessage(matched.chatbotOutput.response);
+            responseText = matched.chatbotOutput.response;
         } else if (qLower.includes("ngực") || qLower.includes("khó thở")) {
-            appendBaselineMessage("Tôi khuyên bạn nên đưa người bệnh đến ngay phòng cấp cứu gần nhất vì triệu chứng đau ngực khó thở rất nguy hiểm.");
+            responseText = "Tôi khuyên bạn nên đưa người bệnh đến ngay phòng cấp cứu gần nhất vì triệu chứng đau ngực khó thở rất nguy hiểm.";
         } else {
-            appendBaselineMessage("Tôi là Chatbot baseline hỗ trợ thông tin tổng quát. Do không có công cụ kết nối dữ liệu thực tế, tôi chỉ có thể khuyên bạn tham khảo ý kiến bác sĩ hoặc liên hệ cơ sở y tế.");
+            responseText = "Tôi là Chatbot baseline hỗ trợ thông tin tổng quát. Do không có công cụ kết nối dữ liệu thực tế, tôi chỉ có thể khuyên bạn tham khảo ý kiến bác sĩ hoặc liên hệ cơ sở y tế.";
         }
+        appendBaselineMessage(responseText);
     } else {
         // Agent Mode
         if (matched) {
+            responseText = matched.agentOutput.finalAnswer;
             appendAgentMessage(matched.agentOutput.finalAnswer, matched.agentOutput.trace);
         } else if (qLower.includes("ngực") || qLower.includes("khó thở") || qLower.includes("cấp cứu")) {
+            responseText = "🚨 CẢNH BÁO NGUY HIỂM KHẨN CẤP: Triệu chứng đau ngực, khó thở ở người lớn tuổi có nguy cơ liên quan đến nhồi máu cơ tim. Bạn cần GỌI NGAY 115 hoặc đưa người bệnh đến cấp cứu gần nhất lập tức!";
             appendAgentMessage(
-                "🚨 CẢNH BÁO NGUY HIỂM KHẨN CẤP: Triệu chứng đau ngực, khó thở ở người lớn tuổi có nguy cơ liên quan đến nhồi máu cơ tim. Bạn cần GỌI NGAY 115 hoặc đưa người bệnh đến cấp cứu gần nhất lập tức!",
+                responseText,
                 [{ type: "thought", text: "Phát hiện triệu chứng khẩn cấp đe dọa tính mạng. Kích hoạt Guardrail ngắt đặt lịch." }]
             );
         } else if (qLower.includes("đau") || qLower.includes("sốt") || qLower.includes("ngứa") || qLower.includes("ho")) {
+            responseText = "Dựa trên các triệu chứng bạn mô tả, tôi gợi ý bạn nên đăng ký khám tại Khoa Nội tổng quát hoặc Khoa chuyên khoa tương ứng để bác sĩ chẩn đoán trực tiếp. Bạn muốn tra cứu lịch bác sĩ ở khu vực nào?";
             appendAgentMessage(
-                "Dựa trên các triệu chứng bạn mô tả, tôi gợi ý bạn nên đăng ký khám tại Khoa Nội tổng quát hoặc Khoa chuyên khoa tương ứng để bác sĩ chẩn đoán trực tiếp. Bạn muốn tra cứu lịch bác sĩ ở khu vực nào?",
+                responseText,
                 [
                     { type: "thought", text: "Phân tích cụm triệu chứng để gợi ý chuyên khoa phù hợp." },
                     { type: "action", text: `suggest_specialty["${query}"]` },
@@ -571,17 +643,21 @@ function simulateClientResponse(query, mode) {
                 ]
             );
         } else if (qLower.includes("đặt lịch") || qLower.includes("khám")) {
+            responseText = "Để thực hiện tạo mã đặt lịch hẹn khám bệnh chính thức, vui lòng cung cấp thêm: 1. Họ tên bệnh nhân, 2. Chuyên khoa, 3. Thành phố, 4. Ngày và giờ mong muốn.";
             appendAgentMessage(
-                "Để thực hiện tạo mã đặt lịch hẹn khám bệnh chính thức, vui lòng cung cấp thêm: 1. Họ tên bệnh nhân, 2. Chuyên khoa, 3. Thành phố, 4. Ngày và giờ mong muốn.",
+                responseText,
                 [{ type: "thought", text: "Phát hiện ý định đặt lịch khám nhưng chưa đủ 5 thông tin bắt buộc." }]
             );
         } else {
+            responseText = "Tôi đã tiếp nhận thông tin của bạn. Tôi có thể hỗ trợ bạn tư vấn chuyên khoa, kiểm tra khung giờ trống của bác sĩ hoặc hỗ trợ đặt/đổi/hủy lịch hẹn khám bệnh. Vui lòng cho tôi biết chi tiết hơn nhé!";
             appendAgentMessage(
-                "Tôi đã tiếp nhận thông tin của bạn. Tôi có thể hỗ trợ bạn tư vấn chuyên khoa, kiểm tra khung giờ trống của bác sĩ hoặc hỗ trợ đặt/đổi/hủy lịch hẹn khám bệnh. Vui lòng cho tôi biết chi tiết hơn nhé!",
+                responseText,
                 [{ type: "thought", text: "Xử lý câu hỏi tổng quát từ người dùng." }]
             );
         }
     }
+
+    return responseText;
 }
 
 function escapeHtml(str) {

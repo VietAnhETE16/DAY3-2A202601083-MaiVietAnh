@@ -136,6 +136,20 @@
                             </div>
                         </div>
 
+                        <div class="sidebar-block context-block">
+                            <h3><i class="fa-solid fa-brain text-purple"></i> Context Window Memory</h3>
+                            <div class="context-info-card">
+                                <div class="context-status">
+                                    <span class="context-dot" id="context-dot"></span>
+                                    <span id="context-status-text">Trạng thái: <strong>0 lượt chat</strong></span>
+                                </div>
+                                <p class="context-desc">Gửi lịch sử hội thoại trước đó để AI duy trì ngữ cảnh liên tục.</p>
+                                <button id="clear-context-btn" class="btn-clear-context">
+                                    <i class="fa-solid fa-broom"></i> Xóa Context Window
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="sidebar-block">
                             <h3><i class="fa-solid fa-bolt"></i> Câu Hỏi Thử Nghiệm Nhanh</h3>
                             <div class="preset-buttons">
@@ -165,7 +179,10 @@
                                 <i class="fa-solid fa-comments-dollar text-teal"></i>
                                 <span>Phòng Hỏi Đáp Y Tế Realtime — <strong>MedGeco Live Assistant</strong></span>
                             </div>
-                            <button id="clear-chat-btn" class="btn-secondary small"><i class="fa-solid fa-trash-can"></i> Xóa hội thoại</button>
+                            <div class="chat-header-actions">
+                                <span class="context-badge" id="chat-header-context-badge"><i class="fa-solid fa-memory"></i> Context: 0 turns</span>
+                                <button id="clear-chat-btn" class="btn-secondary small"><i class="fa-solid fa-trash-can"></i> Clear UI Chat</button>
+                            </div>
                         </div>
 
                         <!-- Chat Messages Container -->

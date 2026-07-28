@@ -1,11 +1,10 @@
 """
-🏥 MEDGECO AI AGENT - DEMO WEB SERVER & API BRIDGE
+🏥 MEDGECO AI AGENT - DEMO WEB SERVER & API BRIDGE (VỚI CONTEXT WINDOW MEMORY)
 Chạy web app UI/UX tương tác trực tiếp với ReAct Agent & Chatbot Baseline logic.
 
-Cách chạy:
-    python server.py
-Mở trình duyệt:
-    http://localhost:8000
+Tính năng mới:
+    - Context Window Memory: Nạp lịch sử hội thoại nhiều lượt để AI hiểu ngữ cảnh liên tục.
+    - Reset Context Window API: Xóa bộ nhớ ngữ cảnh khi người dùng yêu cầu.
 """
 
 import http.server
@@ -29,9 +28,19 @@ except Exception as e:
 PORT = 8000
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
-def run_agent_interactive(user_query: str):
+def run_agent_interactive(user_query: str, history_context: list = None):
     if not provider:
         return {"mode": "agent", "finalAnswer": "Chưa nạp được Provider backend.", "trace": []}
+
+    # Formatting Context Window (Lịch sử hội thoại trước đó)
+    context_str = ""
+    if history_context and len(history_context) > 0:
+        context_str = "\n--- 🧠 CONTEXT WINDOW (LỊCH SỬ CHAT TRƯỚC ĐÓ) ---\n"
+        for item in history_context:
+            role = "Bệnh nhân" if item.get("role") == "user" else "MedGeco AI"
+            content = item.get("content", "")
+            context_str += f"{role}: {content}\n"
+        context_str += "--- KẾT THÚC CONTEXT WINDOW ---\n\n"
 
     history = []
     trace_steps = []
@@ -40,7 +49,7 @@ def run_agent_interactive(user_query: str):
 
     while step < MAX_ITERATIONS:
         step += 1
-        full_prompt = user_query + "\n"
+        full_prompt = context_str + f"User Query Hiện Tại: {user_query}\n"
         if history:
             full_prompt += "\n".join(history) + "\n"
 
@@ -98,18 +107,30 @@ def run_agent_interactive(user_query: str):
     return {
         "mode": "agent",
         "finalAnswer": final_answer,
-        "trace": trace_steps
+        "trace": trace_steps,
+        "contextTurns": len(history_context) if history_context else 0
     }
 
-def run_baseline_interactive(user_query: str):
+def run_baseline_interactive(user_query: str, history_context: list = None):
     if not provider:
         return {"mode": "baseline", "response": "Chưa nạp được Provider backend.", "finalAnswer": "Chưa nạp được Provider backend."}
 
-    response = generate_with_retry(provider, user_query, system_prompt=CHATBOT_BASELINE_PROMPT)
+    context_str = ""
+    if history_context and len(history_context) > 0:
+        context_str = "\n--- CONTEXT WINDOW (LỊCH SỬ CHAT TRƯỚC ĐÓ) ---\n"
+        for item in history_context:
+            role = "Bệnh nhân" if item.get("role") == "user" else "Chatbot"
+            content = item.get("content", "")
+            context_str += f"{role}: {content}\n"
+        context_str += "--- KẾT THÚC CONTEXT WINDOW ---\n\n"
+
+    full_query = context_str + f"Bệnh nhân hỏi: {user_query}"
+    response = generate_with_retry(provider, full_query, system_prompt=CHATBOT_BASELINE_PROMPT)
     return {
         "mode": "baseline",
         "response": response,
-        "finalAnswer": response
+        "finalAnswer": response,
+        "contextTurns": len(history_context) if history_context else 0
     }
 
 class MedGecoHTTPHandler(http.server.SimpleHTTPRequestHandler):
@@ -124,11 +145,12 @@ class MedGecoHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data.decode('utf-8'))
                 query = data.get("query", "")
                 mode = data.get("mode", "agent")
+                history_context = data.get("history", [])
 
                 if mode == "baseline":
-                    response_data = run_baseline_interactive(query)
+                    response_data = run_baseline_interactive(query, history_context)
                 else:
-                    response_data = run_agent_interactive(query)
+                    response_data = run_agent_interactive(query, history_context)
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -139,16 +161,22 @@ class MedGecoHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(ex)}, ensure_ascii=False).encode('utf-8'))
+
+        elif self.path == "/api/reset_context":
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "message": "Context window reset successfully"}, ensure_ascii=False).encode('utf-8'))
+
         else:
             self.send_error(404, "Endpoint not found")
 
 if __name__ == "__main__":
     print("==================================================")
-    print("🏥 MEDGECO AI AGENT — UX/UI DEMO WEB SERVER")
+    print("🏥 MEDGECO AI AGENT — DEMO WEB SERVER (VỚI CONTEXT WINDOW)")
     print("==================================================")
     print(f"🚀 Server đang khởi chạy tại: http://localhost:{PORT}")
     print(f"📂 Thư mục web static: {WEB_DIR}")
-    print("Bấm Ctrl+C để dừng server.")
     print("==================================================")
     
     with socketserver.TCPServer(("", PORT), MedGecoHTTPHandler) as httpd:
