@@ -426,21 +426,26 @@ function submitQuery(query) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: query, mode: mode })
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) throw new Error("HTTP status " + res.status);
+        return res.json();
+    })
     .then(data => {
         removeTypingIndicator(typingId);
         if (data.mode === "agent") {
-            appendAgentMessage(data.finalAnswer, data.trace);
+            const answer = data.finalAnswer || data.response || "Không nhận được phản hồi từ hệ thống.";
+            appendAgentMessage(answer, data.trace || []);
         } else {
-            appendBaselineMessage(data.response);
+            const answer = data.response || data.finalAnswer || "Không nhận được phản hồi từ hệ thống.";
+            appendBaselineMessage(answer);
         }
     })
-    .catch(() => {
-        // Fallback to Intelligent Client-side Engine
+    .catch(err => {
+        console.warn("API Backend error, falling back to intelligent simulator:", err);
         setTimeout(() => {
             removeTypingIndicator(typingId);
             simulateClientResponse(query, mode);
-        }, 1000);
+        }, 500);
     });
 }
 
