@@ -349,46 +349,56 @@ if __name__ == "__main__":
     tests = load_test_cases()
     print(f"✅ Đã tải thành công {len(tests)} Test Cases từ config/test_cases.json\n")
     
-    # Chỉ chạy 5 test cases đầu tiên trên baseline chatbot và lưu vào output_baseline.md
-    tests_to_run = tests[:5]
-    print(f"🚀 Bắt đầu chạy Baseline Chatbot trên {len(tests_to_run)} kịch bản đầu tiên...")
+    # Lựa chọn chạy từ dòng lệnh:
+    # - Không truyền tham số: Chạy tất cả Test Cases
+    # - Truyền tham số số (0-9): Chạy test case tương ứng
+    # - Truyền tham số ID (TC01_...): Chạy test case tương ứng
     
-    output_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output_baseline.md")
+    run_all = True
+    target_test = None
     
-    # Ghi tiêu đề file
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("# KẾT QUẢ CHẠY CHATBOT BASELINE TRÊN 5 TEST CASES\n\n")
-        f.write(f"LLM Provider: {provider.__class__.__name__} (Model: {model_name})\n")
-        f.write("---\n\n")
-        
-    for idx, test in enumerate(tests_to_run, start=1):
-        user_input = test["user_input"]
-        print(f"\n==================================================")
-        print(f"📝 RUNNING TC {idx}/{len(tests_to_run)}: {test['id']}")
-        print(f"❓ Câu hỏi: {user_input}")
-        print(f"==================================================")
-        
-        # Đợi giãn cách để tránh quota limit
-        print("⏳ Đang đợi 13 giây để bảo vệ Rate Limit...")
-        time.sleep(13)
-        
-        # Gọi sinh câu trả lời
-        response = generate_with_retry(provider, user_input, system_prompt=CHATBOT_BASELINE_PROMPT)
-        
-        # Lỗi API fallback sang MedicalMockProvider
-        if "403" in response or "404" in response or "Exception" in response or "Error" in response or "denied" in response.lower():
-            print("⚠️ Phát hiện lỗi API/Xác thực. Chuyển sang chế độ giả lập phản hồi y tế offline...")
-            mock_prov = MedicalMockProvider()
-            response = mock_prov.generate(user_input, system_prompt=CHATBOT_BASELINE_PROMPT)
+    if len(sys.argv) > 1:
+        arg = sys.argv[1].strip()
+        if arg.lower() != "all":
+            if arg.isdigit():
+                idx = int(arg)
+                if 0 <= idx < len(tests):
+                    target_test = tests[idx]
+                    run_all = False
+            else:
+                for t in tests:
+                    if t["id"].lower() == arg.lower():
+                        target_test = t
+                        run_all = False
+                        break
+                        
+    if run_all:
+        print("🚀 Bắt đầu kiểm thử tự động ghép nối vòng lặp ReAct Agent...")
+        for idx, test in enumerate(tests, start=1):
+            print(f"\n==================================================")
+            print(f"📝 TEST CASE {idx}/{len(tests)}: {test['id']} - {test['description']}")
+            print(f"❓ Câu hỏi: {test['user_input']}")
+            print(f"==================================================")
             
-        print(f"🤖 Chatbot trả lời:\n{response}")
-        
-        # Lưu vào file output_baseline.md
-        with open(output_path, "a", encoding="utf-8") as f:
-            f.write(f"## 📝 TEST CASE {idx}: {test['id']}\n")
-            f.write(f"**Mô tả**: {test['description']}\n\n")
-            f.write(f"**Câu hỏi**: {user_input}\n\n")
-            f.write(f"🤖 **Chatbot trả lời**:\n{response}\n\n")
-            f.write("---\n\n")
+            print("--- DEMO 1: CHẠY TRÊN CHATBOT BASELINE ---")
+            run_baseline_chatbot(test["user_input"], provider)
             
-        print(f"✅ TC {idx} hoàn thành.")
+            print("\n--- DEMO 2: CHẠY TRÊN REACT AGENT ---")
+            run_react_agent(test["user_input"], provider)
+            print(f"\n[KẾT THÚC TEST CASE {test['id']}]")
+            print("==================================================")
+    else:
+        if target_test:
+            print(f"\n==================================================")
+            print(f"📝 CHẠY KIỂM THỬ: {target_test['id']} - {target_test['description']}")
+            print(f"❓ Câu hỏi: {target_test['user_input']}")
+            print(f"==================================================")
+            
+            print("--- DEMO 1: CHẠY TRÊN CHATBOT BASELINE ---")
+            run_baseline_chatbot(target_test["user_input"], provider)
+            
+            print("\n--- DEMO 2: CHẠY TRÊN REACT AGENT ---")
+            run_react_agent(target_test["user_input"], provider)
+            print("==================================================")
+        else:
+            print(f"❌ Lỗi: Không tìm thấy Test Case khớp với tham số '{sys.argv[1]}'.")
