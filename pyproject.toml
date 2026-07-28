@@ -1,0 +1,14 @@
+[project]
+name = "day03-2a202601083-maivietanh"
+version = "0.1.0"
+description = "Day3: AI Agent"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "anthropic",
+    "fastapi>=0.140.7",
+    "google-genai",
+    "openai",
+    "python-dotenv",
+    "requests",
+]
